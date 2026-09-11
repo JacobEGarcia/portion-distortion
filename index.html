@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Portion Distortion - Snack Industry Simulator</title>
+<style>
+:root{--bg:#181009;--ink:#f0dfc0;--dim:#94805e;--accent:#fb923c;--line:#33271a;--card:#211a10}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:26px 14px}
+h1{font-size:24px;letter-spacing:5px;color:var(--accent);text-transform:uppercase;text-align:center}
+.sub{color:var(--dim);letter-spacing:2.5px;font-size:10.5px;text-transform:uppercase;margin-top:6px}
+#product{margin:20px 0;font-size:56px;text-align:center}
+#hud{font-size:12px;color:var(--dim);letter-spacing:1.5px;text-transform:uppercase;text-align:center;line-height:2}
+#hud b{color:var(--accent)}
+#event{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--accent);padding:16px 18px;width:min(560px,94vw);min-height:80px;font-size:13.5px;line-height:1.65}
+#choices{display:grid;gap:9px;width:min(560px,94vw);margin-top:11px}
+button{cursor:pointer;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:13px 14px;font-family:inherit;font-size:13px;text-align:left;transition:border-color .15s}
+button:hover{border-color:var(--accent)}
+button small{display:block;color:var(--dim);font-size:11px;margin-top:3px}
+#log{width:min(560px,94vw);margin-top:14px;font-size:11.5px;color:var(--dim);line-height:1.75;text-align:center}
+</style>
+</head>
+<body>
+<h1>Portion Distortion</h1>
+<div class="sub">you run a snack conglomerate &middot; the satire writes itself</div>
+<div id="product">🥤</div>
+<div id="hud"></div>
+<div id="event"></div>
+<div id="choices"></div>
+<div id="log"></div>
+<script>
+const $=id=>document.getElementById(id);
+const S={q:1,profit:30,health:60,hype:40,over:false};
+const EVENTS=[
+ ['Marketing wants to rename "Large" to "Regular" and introduce "Blimpie Grande."',[['Approve the rename','profit +12, health -8',s=>{s.profit+=12;s.health-=8}],['Keep honest labels','health +8, profit -4',s=>{s.health+=8;s.profit-=4}],['Rename it "Artisanal Regular"','hype +10, profit +6',s=>{s.hype+=10;s.profit+=6}]]],
+ ['A scientist on the payroll says the soda is "basically hydration." She is winking.',[['Put it on the billboard','profit +10, health -10',s=>{s.profit+=10;s.health-=10}],['Fire the billboard, keep the scientist','health +6, hype -4',s=>{s.health+=6;s.hype-=4}],['Fund her actual research','health +10, profit -8',s=>{s.health+=10;s.profit-=8}]]],
+ ['The cafeteria tray division proposes a tray that is itself a snack.',[['Greenlight the edible tray','hype +12, health -6',s=>{s.hype+=12;s.health-=6}],['Ask if anyone asked for this','profit -2, sanity +0',s=>{s.profit-=2}],['Make it from oats, call it fiber','health +7, hype +5',s=>{s.health+=7;s.hype+=5}]]],
+ ['A senator schedules a hearing about your "bottomless fry trough."',[['Send a lobbyist with gift baskets','profit +8, hype -6',s=>{s.profit+=8;s.hype-=6}],['Show up and apologize sincerely','health +10, hype +6',s=>{s.health+=10;s.hype+=6}],['Blame Big Fork','hype +4, risky',s=>{if(Math.random()<.5){s.hype+=4}else{s.health-=10}}]]],
+ ['Focus group says the new chips "taste like a dare." Sales are up 300%.',[['Lean in: "The Dare Chip"','hype +10, profit +10, health -8',s=>{s.hype+=10;s.profit+=10;s.health-=8}],['Reformulate quietly','health +8, profit -5',s=>{s.health+=8;s.profit-=5}],['Limited edition, then retire it','profit +6, health +3',s=>{s.profit+=6;s.health+=3}]]],
+ ['Your CEO wants a salad line "for the brand halo." It will sit next to the trough.',[['Make the salad genuinely good','health +10, profit -6',s=>{s.health+=10;s.profit-=6}],['Make it 900 calories with candied croutons','profit +8, health -7',s=>{s.profit+=8;s.health-=7}],['Kale-washing campaign only','hype +6, health -3',s=>{s.hype+=6;s.health-=3}]]]];
+function clamp(x){return Math.max(0,Math.min(100,x))}
+function hud(){$('hud').innerHTML='QUARTER <b>'+S.q+'</b>/10 &middot; PROFIT <b>'+S.profit+'%</b> &middot; PUBLIC HEALTH <b>'+S.health+'%</b> &middot; HYPE <b>'+S.hype+'%</b>';
+ $('product').textContent=S.profit>70?'🏭':S.health>70?'🥗':'🥤';}
+function log(t,c){const d=document.createElement('div');d.textContent=t;if(c)d.style.color=c;$('log').prepend(d);}
+function render(){
+ hud();if(S.over)return;
+ const ev=EVENTS[Math.floor(Math.random()*EVENTS.length)];
+ $('event').innerHTML='<b>Q'+S.q+':</b> '+ev[0];
+ $('choices').innerHTML='';
+ ev[1].forEach(o=>{
+  const b=document.createElement('button');b.innerHTML=o[0]+'<small>'+o[1]+'</small>';
+  b.onclick=()=>{o[2](S);S.profit=clamp(S.profit);S.health=clamp(S.health);S.hype=clamp(S.hype);
+   log('Q'+S.q+': '+o[0]+'.');S.q++;
+   if(S.profit<=0){end(false,'The board votes you out. Your replacement promises "even more trough."');}
+   else if(S.health<=0){end(false,'Public health cratered. The exposé is titled "The Trough Years." It wins a Pulitzer. You get a footnote.');}
+   else if(S.q>10){const win=S.health>=50&&S.profit>=50;end(win,win?'Ten quarters. Profitable AND nobody needs a bigger doorframe. The impossible portfolio.':S.profit>=60?'Rich, but the documentaries have begun.':'The company survives as a cautionary tale with decent snacks.');}
+   else render();};
+  $('choices').appendChild(b);});}
+function end(win,msg){S.over=true;$('event').innerHTML='<b>'+(win?'INDUSTRY LEGEND':'EXIT PACKAGE')+'</b> - '+msg;
+ $('choices').innerHTML='';const b=document.createElement('button');
+ b.textContent='NEW CONGLOMERATE';b.onclick=()=>{Object.assign(S,{q:1,profit:30,health:60,hype:40,over:false});$('log').innerHTML='';render();};
+ $('choices').appendChild(b);log(msg,win?'var(--accent)':'#f87171');}
+render();
+</script>
+</body>
+</html>
