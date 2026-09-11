@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Portion Distortion - Snack Industry Simulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;900&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5efe1; --card:#fdfaf1; --line:#ddd1b8; --line2:#cbbc9c;
+  --ink:#33291a; --dim:#8b7c60; --faint:#b3a684;
+  --orange:#d15a22; --green:#4f7a3a; --red:#b03a2c;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:'Archivo',system-ui,sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:36px 16px 56px}
+.wrap{width:min(660px,95vw)}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;border-bottom:3px double var(--line2);padding-bottom:16px}
+h1{font-size:32px;font-weight:900;letter-spacing:-.8px;text-transform:uppercase;line-height:1}
+h1 span{color:var(--orange)}
+.sub{color:var(--dim);font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.8px;text-transform:uppercase;margin-top:8px}
+.annual{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--dim);text-align:right;line-height:1.9;text-transform:uppercase;letter-spacing:1px}
+.annual b{color:var(--orange);font-weight:600}
+#hud{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:20px 0}
+.metric{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.metric .k{font-family:'IBM Plex Mono',monospace;font-size:9px;letter-spacing:1.6px;text-transform:uppercase;color:var(--faint)}
+.metric .v{font-weight:900;font-size:26px;margin-top:4px;font-variant-numeric:tabular-nums;letter-spacing:-.5px}
+.metric .trend{height:4px;background:#ece3cd;border-radius:2px;margin-top:8px;overflow:hidden}
+.metric .trend i{display:block;height:100%;border-radius:2px;transition:width .35s}
+#product{display:none}
+#event{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px 22px;min-height:96px;font-size:15.5px;line-height:1.7;box-shadow:0 1px 0 rgba(51,41,26,.06);display:flex;gap:18px;align-items:flex-start}
+#event .icon{flex:none;color:var(--orange);margin-top:2px}
+#event .qt{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;letter-spacing:2px;color:var(--orange);display:block;margin-bottom:8px;text-transform:uppercase}
+#event.win .qt{color:var(--green)} #event.win .icon{color:var(--green)}
+#event.lose .qt{color:var(--red)} #event.lose .icon{color:var(--red)}
+#choices{display:grid;gap:8px;margin-top:10px}
+button{cursor:pointer;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:14px 16px;font-family:inherit;font-size:14px;font-weight:600;text-align:left;transition:border-color .15s,transform .15s;display:flex;justify-content:space-between;align-items:baseline;gap:14px}
+button:hover{border-color:var(--orange);transform:translateX(3px)}
+button small{color:var(--faint);font-family:'IBM Plex Mono',monospace;font-size:10.5px;font-weight:500;flex:none}
+#log{margin-top:16px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--faint);line-height:1.85}
+footer{margin-top:24px;color:var(--faint);font-family:'IBM Plex Mono',monospace;font-size:10px;letter-spacing:1.6px;text-transform:uppercase;text-align:center}
+@media(max-width:640px){#hud{grid-template-columns:repeat(2,1fr)}button{flex-direction:column;gap:3px}h1{font-size:25px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div>
+    <h1>Portion <span>Distortion</span></h1>
+    <div class="sub">Snack industry simulator &middot; the satire writes itself</div>
+  </div>
+  <div class="annual">Annual report<br>FY never<br><b>form 10-YUM</b></div>
+</header>
+<div id="hud"></div>
+<div id="product"></div>
+<div id="event"></div>
+<div id="choices"></div>
+<div id="log"></div>
+<footer>Portion Distortion Holdings &middot; a wholly owned subsidiary of your cravings</footer>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const ICONS={
+ soda:'<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10l-1.5 18h-7z"/><path d="M7.4 8h9.2M13 3l2-2"/><path d="M10 12c1.5 1 3 1 4.5.5" stroke-width="1.2"/></svg>',
+ factory:'<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21V10l5 3v-3l5 3v-3l5 3v8z"/><path d="M6 10V4h2.5v4M13 8V3h2.5v6"/><path d="M7 17.5h1.5M11 17.5h1.5M15 17.5h1.5"/></svg>',
+ salad:'<svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12h16a8 8 0 0 1-16 0z"/><path d="M8 12c-1-2.5.5-5 3-5.5M12 12c0-3 1.5-5 4-5M15 12c1-2 2.5-3 4.5-2.5" stroke-width="1.3"/></svg>'
+};
+const S={q:1,profit:30,health:60,hype:40,over:false};
+const EVENTS=[
+ ['Marketing wants to rename "Large" to "Regular" and introduce "Blimpie Grande."',[['Approve the rename','profit +12, health -8',s=>{s.profit+=12;s.health-=8}],['Keep honest labels','health +8, profit -4',s=>{s.health+=8;s.profit-=4}],['Rename it "Artisanal Regular"','hype +10, profit +6',s=>{s.hype+=10;s.profit+=6}]]],
+ ['A scientist on the payroll says the soda is "basically hydration." She is winking.',[['Put it on the billboard','profit +10, health -10',s=>{s.profit+=10;s.health-=10}],['Fire the billboard, keep the scientist','health +6, hype -4',s=>{s.health+=6;s.hype-=4}],['Fund her actual research','health +10, profit -8',s=>{s.health+=10;s.profit-=8}]]],
+ ['The cafeteria tray division proposes a tray that is itself a snack.',[['Greenlight the edible tray','hype +12, health -6',s=>{s.hype+=12;s.health-=6}],['Ask if anyone asked for this','profit -2, sanity +0',s=>{s.profit-=2}],['Make it from oats, call it fiber','health +7, hype +5',s=>{s.health+=7;s.hype+=5}]]],
+ ['A senator schedules a hearing about your "bottomless fry trough."',[['Send a lobbyist with gift baskets','profit +8, hype -6',s=>{s.profit+=8;s.hype-=6}],['Show up and apologize sincerely','health +10, hype +6',s=>{s.health+=10;s.hype+=6}],['Blame Big Fork','hype +4, risky',s=>{if(Math.random()<.5){s.hype+=4}else{s.health-=10}}]]],
+ ['Focus group says the new chips "taste like a dare." Sales are up 300%.',[['Lean in: "The Dare Chip"','hype +10, profit +10, health -8',s=>{s.hype+=10;s.profit+=10;s.health-=8}],['Reformulate quietly','health +8, profit -5',s=>{s.health+=8;s.profit-=5}],['Limited edition, then retire it','profit +6, health +3',s=>{s.profit+=6;s.health+=3}]]],
+ ['Your CEO wants a salad line "for the brand halo." It will sit next to the trough.',[['Make the salad genuinely good','health +10, profit -6',s=>{s.health+=10;s.profit-=6}],['Make it 900 calories with candied croutons','profit +8, health -7',s=>{s.profit+=8;s.health-=7}],['Kale-washing campaign only','hype +6, health -3',s=>{s.hype+=6;s.health-=3}]]]];
+function clamp(x){return Math.max(0,Math.min(100,x))}
+function hud(){
+ const row=(k,v,color)=>'<div class="metric"><div class="k">'+k+'</div><div class="v" style="color:'+color+'">'+v+'</div><div class="trend"><i style="width:'+Math.min(100,Math.max(0,parseInt(v)))+'%;background:'+color+'"></i></div></div>';
+ $('hud').innerHTML=
+  row('Quarter',S.q+'<span style="color:var(--faint);font-size:14px">/10</span>','var(--ink)')+
+  row('Profit',S.profit+'%',S.profit<25?'var(--red)':'var(--orange)')+
+  row('Public health',S.health+'%',S.health<25?'var(--red)':'var(--green)')+
+  row('Hype',S.hype+'%','var(--ink)');
+ $('product').innerHTML=S.profit>70?ICONS.factory:S.health>70?ICONS.salad:ICONS.soda;}
+function productIcon(){return S.profit>70?ICONS.factory:S.health>70?ICONS.salad:ICONS.soda;}
+function log(t,c){const d=document.createElement('div');d.textContent=t;if(c)d.style.color=c;$('log').prepend(d);}
+function render(){
+ hud();if(S.over)return;
+ const ev=EVENTS[Math.floor(Math.random()*EVENTS.length)];
+ $('event').className='';
+ $('event').innerHTML='<span class="icon">'+productIcon()+'</span><span><span class="qt">Quarter '+S.q+' &middot; board memo</span>'+ev[0]+'</span>';
+ $('choices').innerHTML='';
+ ev[1].forEach(o=>{
+  const b=document.createElement('button');b.innerHTML='<span>'+o[0]+'</span><small>'+o[1]+'</small>';
+  b.onclick=()=>{o[2](S);S.profit=clamp(S.profit);S.health=clamp(S.health);S.hype=clamp(S.hype);
+   log('Q'+S.q+': '+o[0]+'.');S.q++;
+   if(S.profit<=0){end(false,'The board votes you out. Your replacement promises "even more trough."');}
+   else if(S.health<=0){end(false,'Public health cratered. The exposé is titled "The Trough Years." It wins a Pulitzer. You get a footnote.');}
+   else if(S.q>10){const win=S.health>=50&&S.profit>=50;end(win,win?'Ten quarters. Profitable AND nobody needs a bigger doorframe. The impossible portfolio.':S.profit>=60?'Rich, but the documentaries have begun.':'The company survives as a cautionary tale with decent snacks.');}
+   else render();};
+  $('choices').appendChild(b);});}
+function end(win,msg){S.over=true;$('event').className=win?'win':'lose';
+ $('event').innerHTML='<span class="icon">'+(win?ICONS.salad:ICONS.factory)+'</span><span><span class="qt">'+(win?'Industry legend':'Exit package')+'</span>'+msg+'</span>';
+ $('choices').innerHTML='';const b=document.createElement('button');
+ b.innerHTML='<span>New conglomerate</span>';b.onclick=()=>{Object.assign(S,{q:1,profit:30,health:60,hype:40,over:false});$('log').innerHTML='';render();};
+ $('choices').appendChild(b);log(msg,win?'var(--green)':'var(--red)');}
+render();
+</script>
+</body>
+</html>
